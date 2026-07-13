@@ -22,3 +22,12 @@ reactive_node:
   ros__parameters:
     trigger_distance_m: 0.45
     cooldown_s: 6.0
+
+# Only used on engine branches (ignored on main, where the node doesn't exist).
+mujoco_driver:
+  ros__parameters:
+    wheel_radius: 0.05
+    wheelbase: 0.30
+    publish_rate: 50.0
+    lidar_rays: 180
+    range_max: 2.0

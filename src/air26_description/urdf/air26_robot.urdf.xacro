@@ -85,8 +85,8 @@
   <xacro:range_sensor name="left"         parent="base_link" x="${chassis_cx}"   y="${ side_y}" z="${sens_z}" roll="0" pitch="0"     yaw="${ pi/2}"/>
   <xacro:range_sensor name="right"        parent="base_link" x="${chassis_cx}"   y="${-side_y}" z="${sens_z}" roll="0" pitch="0"     yaw="${-pi/2}"/>
   <xacro:range_sensor name="rear"         parent="base_link" x="${rear_x}"       y="0"          z="${sens_z}" roll="0" pitch="0"     yaw="${pi}"/>
-  <xacro:range_sensor name="canopy_left"  parent="base_link" x="${chassis_cx}"   y="${ 0.06}"   z="${sens_z+0.05}" roll="0" pitch="-0.9" yaw="0.2"/>
-  <xacro:range_sensor name="canopy_right" parent="base_link" x="${chassis_cx}"   y="${-0.06}"   z="${sens_z+0.05}" roll="0" pitch="-0.9" yaw="-0.2"/>
+  <xacro:range_sensor name="canopy_left"  parent="base_link" x="${chassis_cx}"   y="${ 0.06}"   z="${sens_z+0.05}" roll="0" pitch="-0.5" yaw="0.4"/>
+  <xacro:range_sensor name="canopy_right" parent="base_link" x="${chassis_cx}"   y="${-0.06}"   z="${sens_z+0.05}" roll="0" pitch="-0.5" yaw="-0.4"/>
 
   <!-- ================================================================== -->
   <!-- ## student additions go here  (Task 1)                              -->
