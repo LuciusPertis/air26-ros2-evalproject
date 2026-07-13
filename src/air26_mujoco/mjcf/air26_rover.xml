@@ -1,0 +1,184 @@
+<!--
+  air26_rover.xml — MuJoCo model of the AIR26 clearing rover + a light-obstacle
+  arena. This is the M1 reference physics.
+
+  Geometry mirrors air26_description/urdf/air26_robot.urdf.xacro so the shared
+  robot_state_publisher (which drives RViz from the URDF + /joint_states) stays
+  aligned with the physics. base_link is the rear-axle midpoint at wheel-axle
+  height; the front axle is at x=+wheelbase.
+
+  JOINT NAMES ARE THE FROZEN INTERFACE — identical to the URDF and the fake
+  driver, so the same /joint_states, /cmd_vel and arm-trajectory wiring works
+  unchanged (see PROGRESS.md).
+
+  Rear no-diff: both rear wheels are driven at equal velocity (see actuators) and
+  given LOWER slide friction than the front so steady turns scrub the rigid rear
+  pair cleanly instead of binding (spec §7).
+
+  Detectable environment (obstacles + arena walls) is in geom group 3; the driver
+  casts range/lidar rays against group 3 only, so sensors never hit the robot or
+  the floor.
+-->
+<mujoco model="air26_rover">
+  <compiler angle="radian" eulerseq="xyz" autolimits="true"/>
+  <option timestep="0.002" gravity="0 0 -9.81" integrator="implicitfast"/>
+
+  <default>
+    <joint damping="0.05"/>
+    <!-- robot links: group 0, not ray-detectable -->
+    <default class="robot">
+      <geom group="0" rgba="0.2 0.22 0.25 1" friction="1.0 0.01 0.001"/>
+    </default>
+    <default class="wheel_front">
+      <geom group="0" rgba="0.08 0.08 0.08 1" friction="1.5 0.02 0.002"/>
+    </default>
+    <default class="wheel_rear">
+      <!-- reduced slide friction -> rear pair scrubs on steady turns -->
+      <geom group="0" rgba="0.08 0.08 0.08 1" friction="0.7 0.005 0.0005"/>
+    </default>
+    <!-- detectable environment: group 3 -->
+    <default class="obstacle">
+      <geom group="3" rgba="0.9 0.55 0.1 1"/>
+    </default>
+    <default class="wall">
+      <geom group="3" rgba="0.35 0.35 0.4 1"/>
+    </default>
+  </default>
+
+  <asset>
+    <texture name="grid" type="2d" builtin="checker" rgb1="0.15 0.15 0.17"
+             rgb2="0.2 0.2 0.22" width="512" height="512"/>
+    <material name="grid" texture="grid" texrepeat="20 20" reflectance="0.1"/>
+  </asset>
+
+  <worldbody>
+    <light pos="0 0 3" dir="0 0 -1" diffuse="0.8 0.8 0.8"/>
+    <geom name="floor" type="plane" size="10 10 0.1" material="grid"
+          friction="1.0 0.01 0.001" group="0"/>
+
+    <!-- ================= the rover ================= -->
+    <body name="base_link" pos="0 0 0.05">
+      <freejoint name="chassis_free"/>
+      <!-- chassis box, offset like the URDF (center between axles, above axle) -->
+      <geom name="chassis" class="robot" type="box" size="0.22 0.10 0.04"
+            pos="0.15 0 0.05" mass="3.0"/>
+
+      <!-- ---- front axle: steered + rolling ---- -->
+      <body name="front_left_steer_link" pos="0.30 0.13 0">
+        <joint name="front_left_steer_joint" type="hinge" axis="0 0 1"
+               range="-0.6 0.6"/>
+        <geom class="robot" type="box" size="0.015 0.015 0.025" rgba="0.9 0.55 0.1 1"/>
+        <body name="front_left_wheel_link" pos="0 0 0">
+          <joint name="front_left_wheel_joint" type="hinge" axis="0 1 0"/>
+          <geom class="wheel_front" type="cylinder" size="0.05 0.02" euler="1.5708 0 0"/>
+        </body>
+      </body>
+
+      <body name="front_right_steer_link" pos="0.30 -0.13 0">
+        <joint name="front_right_steer_joint" type="hinge" axis="0 0 1"
+               range="-0.6 0.6"/>
+        <geom class="robot" type="box" size="0.015 0.015 0.025" rgba="0.9 0.55 0.1 1"/>
+        <body name="front_right_wheel_link" pos="0 0 0">
+          <joint name="front_right_wheel_joint" type="hinge" axis="0 1 0"/>
+          <geom class="wheel_front" type="cylinder" size="0.05 0.02" euler="1.5708 0 0"/>
+        </body>
+      </body>
+
+      <!-- ---- rear axle: driven, no differential ---- -->
+      <body name="rear_left_wheel_link" pos="0 0.13 0">
+        <joint name="rear_left_wheel_joint" type="hinge" axis="0 1 0"/>
+        <geom class="wheel_rear" type="cylinder" size="0.05 0.02" euler="1.5708 0 0"/>
+      </body>
+      <body name="rear_right_wheel_link" pos="0 -0.13 0">
+        <joint name="rear_right_wheel_joint" type="hinge" axis="0 1 0"/>
+        <geom class="wheel_rear" type="cylinder" size="0.05 0.02" euler="1.5708 0 0"/>
+      </body>
+
+      <!-- ---- clearing arm (3 hinges + paddle) ---- -->
+      <body name="arm_base_link" pos="0.20 0 0.09">
+        <joint name="arm_yaw_joint" type="hinge" axis="0 0 1" range="-1.57 1.57"/>
+        <geom class="robot" type="cylinder" size="0.03 0.015" rgba="0.9 0.55 0.1 1"/>
+        <body name="arm_upper_link" pos="0 0 0.02">
+          <joint name="arm_shoulder_joint" type="hinge" axis="0 1 0" range="-1.2 1.2"/>
+          <geom class="robot" type="box" size="0.07 0.015 0.015" pos="0.07 0 0"/>
+          <body name="arm_fore_link" pos="0.14 0 0">
+            <joint name="arm_elbow_joint" type="hinge" axis="0 1 0" range="-1.5 1.5"/>
+            <geom class="robot" type="box" size="0.06 0.015 0.01" pos="0.06 0 0"/>
+            <!-- flat swiper paddle -->
+            <geom name="paddle" class="robot" type="box" size="0.01 0.06 0.04"
+                  pos="0.12 0 0" rgba="0.85 0.85 0.88 1" friction="1.2 0.01 0.001"/>
+          </body>
+        </body>
+      </body>
+
+      <!-- ---- sensor sites (ray origins/orientations match the URDF) ---- -->
+      <!-- range ring: local +x is the ray direction -->
+      <site name="front_center_range" pos="0.37 0 0.05"   euler="0 0 0"/>
+      <site name="front_left_range"   pos="0.35 0.08 0.05" euler="0 0 0.5"/>
+      <site name="front_right_range"  pos="0.35 -0.08 0.05" euler="0 0 -0.5"/>
+      <site name="left_range"         pos="0.15 0.10 0.05" euler="0 0 1.5708"/>
+      <site name="right_range"        pos="0.15 -0.10 0.05" euler="0 0 -1.5708"/>
+      <site name="rear_range"         pos="-0.07 0 0.05"   euler="0 0 3.14159"/>
+      <site name="canopy_left_range"  pos="0.15 0.06 0.10" euler="0 -0.5 0.4"/>
+      <site name="canopy_right_range" pos="0.15 -0.06 0.10" euler="0 -0.5 -0.4"/>
+      <!-- rear lidar (local frame; z=pi so the 0-angle ray points to the rover rear) -->
+      <site name="lidar" pos="-0.05 0 0.14" euler="0 0 3.14159"/>
+    </body>
+
+    <!-- ================= light obstacles (group 3) ================= -->
+    <!-- NOTE: the horizontal range sensors sit at world z~=0.10, so ground
+         obstacles are tall enough (top ~0.12) to break that plane; the paddle
+         still displaces them because they are very low mass. -->
+    <body name="obs_ground_1" pos="0.55 0 0.06">
+      <freejoint/>
+      <geom class="obstacle" type="box" size="0.05 0.05 0.06" mass="0.05"/>
+    </body>
+    <body name="obs_ground_2" pos="0.75 -0.14 0.06">
+      <freejoint/>
+      <geom class="obstacle" type="box" size="0.04 0.04 0.06" mass="0.04"/>
+    </body>
+    <body name="obs_ground_3" pos="0.90 0.14 0.07">
+      <freejoint/>
+      <geom class="obstacle" type="capsule" size="0.03 0.06" mass="0.04"/>
+    </body>
+
+    <!-- canopy obstacles: light boxes resting on thin static posts, placed so
+         the up-angled canopy sensors (origin z~=0.15, ~0.9 rad up) intersect
+         them, for the canopy swipe + reactive canopy trigger -->
+    <geom name="post_left" class="wall" type="cylinder" size="0.012 0.13"
+          pos="0.34 0.19 0.13"/>
+    <body name="obs_canopy_1" pos="0.34 0.19 0.30">
+      <freejoint/>
+      <geom class="obstacle" type="box" size="0.05 0.05 0.04" mass="0.03"/>
+    </body>
+    <geom name="post_right" class="wall" type="cylinder" size="0.012 0.13"
+          pos="0.36 -0.20 0.13"/>
+    <body name="obs_canopy_2" pos="0.36 -0.20 0.30">
+      <freejoint/>
+      <geom class="obstacle" type="box" size="0.05 0.05 0.04" mass="0.03"/>
+    </body>
+
+    <!-- a light obstacle behind, on the rear range ray, for the backup demo -->
+    <body name="obs_rear" pos="-0.35 0 0.07">
+      <freejoint/>
+      <geom class="obstacle" type="box" size="0.04 0.06 0.07" mass="0.06"
+            rgba="0.8 0.2 0.2 1"/>
+    </body>
+  </worldbody>
+
+  <!-- ================= actuators ================= -->
+  <actuator>
+    <!-- front steering: position servos, both commanded to the same angle -->
+    <position name="steer_left"  joint="front_left_steer_joint"  kp="15" kv="1.0"
+              ctrlrange="-0.6 0.6"/>
+    <position name="steer_right" joint="front_right_steer_joint" kp="15" kv="1.0"
+              ctrlrange="-0.6 0.6"/>
+    <!-- rear drive: velocity servos, both commanded to the same wheel rate -->
+    <velocity name="drive_left"  joint="rear_left_wheel_joint"  kv="0.8"/>
+    <velocity name="drive_right" joint="rear_right_wheel_joint" kv="0.8"/>
+    <!-- arm: position servos -->
+    <position name="arm_yaw"      joint="arm_yaw_joint"      kp="5" kv="0.4"/>
+    <position name="arm_shoulder" joint="arm_shoulder_joint" kp="6" kv="0.5"/>
+    <position name="arm_elbow"    joint="arm_elbow_joint"    kp="4" kv="0.3"/>
+  </actuator>
+</mujoco>
