@@ -1,0 +1,24 @@
+# Shared parameters for the AIR26 demo. Geometry here must match the URDF
+# (air26_description/urdf/air26_robot.urdf.xacro).
+
+/**:
+  ros__parameters:
+    use_sim_time: true
+
+odometry_node:
+  ros__parameters:
+    wheel_radius: 0.05
+    wheelbase: 0.30
+    track_width: 0.26
+
+fake_driver:
+  ros__parameters:
+    wheel_radius: 0.05
+    wheelbase: 0.30
+    track_width: 0.26
+    update_rate: 50.0
+
+reactive_node:
+  ros__parameters:
+    trigger_distance_m: 0.45
+    cooldown_s: 6.0

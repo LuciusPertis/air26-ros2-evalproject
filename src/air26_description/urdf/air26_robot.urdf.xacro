@@ -1,0 +1,98 @@
+<?xml version="1.0"?>
+<!--
+  air26_robot.urdf.xacro — top-level description of the AIR26 clearing rover.
+
+  Layout (REP-103: x forward, y left, z up):
+    base_link is placed at the REAR-AXLE MIDPOINT, at wheel-axle height. That is a
+    deliberate choice: it makes the Task 2 bicycle-model odometry clean — the rear
+    axle is the point whose speed you integrate, and the front axle sits at
+    x = +wheelbase. (odom -> base_link is owned by the Task 2 node, never here.)
+
+  Included pieces live in sibling xacro files, kept small on purpose:
+    common.xacro  — materials + inertial macros
+    wheels.xacro  — steered (front) and fixed (rear) wheel macros
+    arm.xacro     — the 3-DOF swiper arm
+    sensors.xacro — range-sensor macro + rear lidar
+-->
+<robot name="air26_rover" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ==================== tunable geometry ==================== -->
+  <!-- These three are the ones the Task 2 odometry node reads as parameters.
+       If you change them here, change them in air26_bringup params too. -->
+  <xacro:property name="wheel_radius" value="0.05"/>
+  <xacro:property name="wheelbase"    value="0.30"/>   <!-- front axle x-offset -->
+  <xacro:property name="track_width"  value="0.26"/>   <!-- left<->right wheel span -->
+  <xacro:property name="wheel_width"  value="0.04"/>
+  <xacro:property name="steer_limit"  value="0.6"/>    <!-- max steer angle (rad) -->
+
+  <!-- chassis box -->
+  <xacro:property name="chassis_len"  value="0.44"/>
+  <xacro:property name="chassis_wid"  value="0.20"/>
+  <xacro:property name="chassis_hgt"  value="0.08"/>
+  <xacro:property name="chassis_cx"   value="${wheelbase/2.0}"/>  <!-- center between axles -->
+  <xacro:property name="chassis_cz"   value="0.05"/>              <!-- above axle height -->
+
+  <!-- ==================== includes ==================== -->
+  <xacro:include filename="$(find air26_description)/urdf/common.xacro"/>
+  <xacro:include filename="$(find air26_description)/urdf/wheels.xacro"/>
+  <xacro:include filename="$(find air26_description)/urdf/arm.xacro"/>
+  <xacro:include filename="$(find air26_description)/urdf/sensors.xacro"/>
+
+  <!-- ==================== chassis (base_link) ==================== -->
+  <link name="base_link">
+    <xacro:box_inertial mass="3.0" x="${chassis_len}" y="${chassis_wid}" z="${chassis_hgt}">
+      <origin xyz="${chassis_cx} 0 ${chassis_cz}"/>
+    </xacro:box_inertial>
+    <visual>
+      <origin xyz="${chassis_cx} 0 ${chassis_cz}"/>
+      <geometry><box size="${chassis_len} ${chassis_wid} ${chassis_hgt}"/></geometry>
+      <material name="a26_body"/>
+    </visual>
+    <collision>
+      <origin xyz="${chassis_cx} 0 ${chassis_cz}"/>
+      <geometry><box size="${chassis_len} ${chassis_wid} ${chassis_hgt}"/></geometry>
+    </collision>
+  </link>
+
+  <!-- ==================== running gear ==================== -->
+  <!-- front axle: two steering wheels -->
+  <xacro:steered_wheel prefix="front_left"  x="${wheelbase}" y="${ track_width/2.0}"
+                       wheel_radius="${wheel_radius}" wheel_width="${wheel_width}" steer_limit="${steer_limit}"/>
+  <xacro:steered_wheel prefix="front_right" x="${wheelbase}" y="${-track_width/2.0}"
+                       wheel_radius="${wheel_radius}" wheel_width="${wheel_width}" steer_limit="${steer_limit}"/>
+  <!-- rear axle: two driven wheels (no differential; driver spins both equally) -->
+  <xacro:fixed_wheel prefix="rear_left"  x="0" y="${ track_width/2.0}"
+                     wheel_radius="${wheel_radius}" wheel_width="${wheel_width}"/>
+  <xacro:fixed_wheel prefix="rear_right" x="0" y="${-track_width/2.0}"
+                     wheel_radius="${wheel_radius}" wheel_width="${wheel_width}"/>
+
+  <!-- ==================== arm ==================== -->
+  <xacro:clearing_arm parent="base_link" x="${chassis_cx + 0.05}" y="0" z="${chassis_cz + chassis_hgt/2.0}"/>
+
+  <!-- ==================== sensors ==================== -->
+  <!-- rear lidar, up on the tail -->
+  <xacro:rear_lidar parent="base_link" x="-0.05" y="0" z="${chassis_cz + chassis_hgt/2.0 + 0.05}"/>
+
+  <!-- ultrasonic range ring (8): front trio, sides, rear, and two up-angled canopy -->
+  <xacro:property name="front_x" value="${chassis_cx + chassis_len/2.0}"/>
+  <xacro:property name="rear_x"  value="${chassis_cx - chassis_len/2.0}"/>
+  <xacro:property name="side_y"  value="${chassis_wid/2.0}"/>
+  <xacro:property name="sens_z"  value="${chassis_cz}"/>
+
+  <xacro:range_sensor name="front_center" parent="base_link" x="${front_x}"      y="0"          z="${sens_z}" roll="0" pitch="0"     yaw="0"/>
+  <xacro:range_sensor name="front_left"   parent="base_link" x="${front_x-0.02}" y="${ 0.08}"   z="${sens_z}" roll="0" pitch="0"     yaw="0.5"/>
+  <xacro:range_sensor name="front_right"  parent="base_link" x="${front_x-0.02}" y="${-0.08}"   z="${sens_z}" roll="0" pitch="0"     yaw="-0.5"/>
+  <xacro:range_sensor name="left"         parent="base_link" x="${chassis_cx}"   y="${ side_y}" z="${sens_z}" roll="0" pitch="0"     yaw="${ pi/2}"/>
+  <xacro:range_sensor name="right"        parent="base_link" x="${chassis_cx}"   y="${-side_y}" z="${sens_z}" roll="0" pitch="0"     yaw="${-pi/2}"/>
+  <xacro:range_sensor name="rear"         parent="base_link" x="${rear_x}"       y="0"          z="${sens_z}" roll="0" pitch="0"     yaw="${pi}"/>
+  <xacro:range_sensor name="canopy_left"  parent="base_link" x="${chassis_cx}"   y="${ 0.06}"   z="${sens_z+0.05}" roll="0" pitch="-0.9" yaw="0.2"/>
+  <xacro:range_sensor name="canopy_right" parent="base_link" x="${chassis_cx}"   y="${-0.06}"   z="${sens_z+0.05}" roll="0" pitch="-0.9" yaw="-0.2"/>
+
+  <!-- ================================================================== -->
+  <!-- ## student additions go here  (Task 1)                              -->
+  <!-- Add a link/joint/sensor of your own below. Attach it to base_link   -->
+  <!-- (or any existing link), give it a new frame id, then check it with  -->
+  <!-- `check_urdf` and confirm the frame appears in RViz / view_frames.   -->
+  <!-- ================================================================== -->
+
+</robot>

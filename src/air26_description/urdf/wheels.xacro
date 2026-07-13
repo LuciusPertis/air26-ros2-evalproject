@@ -1,0 +1,85 @@
+<?xml version="1.0"?>
+<!--
+  wheels.xacro — macros for the car-like running gear.
+
+  This is an ACKERMANN base, not diff-drive:
+    * the two FRONT wheels STEER (steer joint) and roll passively,
+    * the two REAR wheels are DRIVEN (rolled by the physics driver) at equal
+      velocity but are modeled as two independent joints (no differential).
+
+  Two macros:
+    steered_wheel  — a steering knuckle (revolute about Z) carrying a rolling
+                     wheel (continuous about Y). Used for the front axle.
+    fixed_wheel    — a rolling wheel rigidly mounted to the chassis (continuous
+                     about Y). Used for the rear axle.
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- A front wheel: chassis -> steer knuckle -> wheel. -->
+  <xacro:macro name="steered_wheel" params="prefix x y wheel_radius wheel_width steer_limit">
+    <!-- steering knuckle -->
+    <link name="${prefix}_steer_link">
+      <xacro:box_inertial mass="0.15" x="0.03" y="0.03" z="0.05">
+        <origin xyz="0 0 0"/>
+      </xacro:box_inertial>
+      <visual>
+        <geometry><box size="0.03 0.03 0.05"/></geometry>
+        <material name="a26_accent"/>
+      </visual>
+    </link>
+    <joint name="${prefix}_steer_joint" type="revolute">
+      <parent link="base_link"/>
+      <child link="${prefix}_steer_link"/>
+      <origin xyz="${x} ${y} 0" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="${-steer_limit}" upper="${steer_limit}" effort="10.0" velocity="4.0"/>
+    </joint>
+
+    <!-- rolling wheel -->
+    <link name="${prefix}_wheel_link">
+      <xacro:cylinder_inertial mass="0.30" radius="${wheel_radius}" length="${wheel_width}">
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+      </xacro:cylinder_inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
+        <material name="a26_wheel"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
+      </collision>
+    </link>
+    <joint name="${prefix}_wheel_joint" type="continuous">
+      <parent link="${prefix}_steer_link"/>
+      <child link="${prefix}_wheel_link"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+  </xacro:macro>
+
+  <!-- A rear wheel: rigidly mounted to the chassis, driven. -->
+  <xacro:macro name="fixed_wheel" params="prefix x y wheel_radius wheel_width">
+    <link name="${prefix}_wheel_link">
+      <xacro:cylinder_inertial mass="0.30" radius="${wheel_radius}" length="${wheel_width}">
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+      </xacro:cylinder_inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
+        <material name="a26_wheel"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
+      </collision>
+    </link>
+    <joint name="${prefix}_wheel_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="${prefix}_wheel_link"/>
+      <origin xyz="${x} ${y} 0" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+  </xacro:macro>
+
+</robot>

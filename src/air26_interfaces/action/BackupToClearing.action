@@ -1,0 +1,17 @@
+# Reverse the rover in a straight line until the space behind it is clear.
+# Steering stays centered the whole time — this is a straight reverse, not a
+# maneuver. The action is cancelable and reports live feedback.
+
+# --- goal ---
+float32 clearance_threshold_m   # stop once the rear min-range exceeds this (meters)
+float32 timeout_s               # hard cap on backup duration (seconds)
+---
+# --- result ---
+bool cleared                    # true if we reached the clearance threshold
+bool timed_out                  # true if timeout_s tripped first
+float32 final_clearance_m       # rear min-range at the moment we stopped
+float32 elapsed_s               # total time spent backing up
+---
+# --- feedback ---
+float32 current_clearance_m     # current rear min-range
+float32 elapsed_s               # time elapsed so far

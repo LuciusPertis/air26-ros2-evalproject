@@ -1,0 +1,21 @@
+# twist_mux arbitration for the base command (see AIR26_SCAFFOLD_SPEC §6).
+#
+# Only two producers touch base velocity:
+#   * teleop/cmd_vel  — low priority, the default driver.
+#   * backup/cmd_vel  — high priority; outranks teleop only WHILE the backup
+#     action is publishing (each input has a timeout, so when backup stops
+#     publishing its lock releases and teleop takes back over).
+# The muxed output is remapped to /cmd_vel (the driver's base command) in the
+# launch file.
+twist_mux:
+  ros__parameters:
+    use_sim_time: true
+    topics:
+      teleop:
+        topic: teleop/cmd_vel
+        timeout: 0.5
+        priority: 10
+      backup:
+        topic: backup/cmd_vel
+        timeout: 0.5
+        priority: 100

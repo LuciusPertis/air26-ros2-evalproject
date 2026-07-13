@@ -1,0 +1,10 @@
+# Move the arm to a single named joint configuration.
+
+# --- request ---
+uint8 POSE_STOW=0     # arm folded away
+uint8 POSE_READY=1    # arm raised and ready to swipe
+uint8 pose
+---
+# --- response ---
+bool success
+string message

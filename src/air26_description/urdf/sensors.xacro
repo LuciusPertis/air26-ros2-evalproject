@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<!--
+  sensors.xacro — the rear lidar and the ring of ultrasonic range sensors.
+
+  The range sensors are macro-ized so the URDF stays readable instead of being a
+  wall of near-duplicate blocks (see AIR26_SCAFFOLD_SPEC §4/T1). Each invocation
+  drops one small sensor "puck" link + a fixed joint onto the chassis. The frame
+  id is what shows up in TF and in the sensor_msgs/Range messages the driver
+  publishes; the topic name is derived from the same `name` by the driver.
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- One ultrasonic range sensor. `name` becomes the link/frame id
+       (<name>_range_link) and, downstream, the topic (range/<name>). -->
+  <xacro:macro name="range_sensor" params="name parent x y z roll pitch yaw">
+    <link name="${name}_range_link">
+      <xacro:box_inertial mass="0.01" x="0.02" y="0.02" z="0.015">
+        <origin xyz="0 0 0"/>
+      </xacro:box_inertial>
+      <visual>
+        <geometry><box size="0.02 0.02 0.015"/></geometry>
+        <material name="a26_sensor"/>
+      </visual>
+    </link>
+    <joint name="${name}_range_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="${name}_range_link"/>
+      <origin xyz="${x} ${y} ${z}" rpy="${roll} ${pitch} ${yaw}"/>
+    </joint>
+  </xacro:macro>
+
+  <!-- Rear-mounted 2D lidar. -->
+  <xacro:macro name="rear_lidar" params="parent x y z">
+    <link name="lidar_link">
+      <xacro:cylinder_inertial mass="0.08" radius="0.03" length="0.04">
+        <origin xyz="0 0 0"/>
+      </xacro:cylinder_inertial>
+      <visual>
+        <geometry><cylinder radius="0.03" length="0.04"/></geometry>
+        <material name="a26_lidar"/>
+      </visual>
+      <collision>
+        <geometry><cylinder radius="0.03" length="0.04"/></geometry>
+      </collision>
+    </link>
+    <!-- rpy z=pi so the lidar's +x (0-angle ray) points to the rover's rear -->
+    <joint name="lidar_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="lidar_link"/>
+      <origin xyz="${x} ${y} ${z}" rpy="0 0 ${pi}"/>
+    </joint>
+  </xacro:macro>
+
+</robot>

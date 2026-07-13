@@ -1,0 +1,8 @@
+# Toggle the reactive-swipe behavior on or off. Default state is OFF.
+
+# --- request ---
+bool enable
+---
+# --- response ---
+bool success
+string message

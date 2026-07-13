@@ -1,0 +1,96 @@
+<?xml version="1.0"?>
+<!--
+  arm.xacro — the 3-DOF clearing arm ending in a flat "swiper" paddle.
+
+  Joint chain (all revolute):
+    arm_yaw_joint       about Z  — sweeps the paddle left<->right (the "swipe")
+    arm_shoulder_joint  about Y  — pitches the arm up/down (ground vs canopy plane)
+    arm_elbow_joint     about Y  — second pitch, sets the reach/attack angle
+    -> paddle_link      flat rectangular swiper, fixed to the forearm
+
+  The joint NAMES here are part of the fixed ROS interface: air26_behaviors
+  publishes trajectory_msgs/JointTrajectory using exactly these names, and every
+  engine driver tracks them. Renaming a joint is a cross-branch interface change.
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="clearing_arm" params="parent x y z">
+
+    <!-- yaw turret -->
+    <link name="arm_base_link">
+      <xacro:cylinder_inertial mass="0.10" radius="0.03" length="0.03">
+        <origin xyz="0 0 0"/>
+      </xacro:cylinder_inertial>
+      <visual>
+        <geometry><cylinder radius="0.03" length="0.03"/></geometry>
+        <material name="a26_accent"/>
+      </visual>
+    </link>
+    <joint name="arm_yaw_joint" type="revolute">
+      <parent link="${parent}"/>
+      <child link="arm_base_link"/>
+      <origin xyz="${x} ${y} ${z}" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="-1.57" upper="1.57" effort="8.0" velocity="3.0"/>
+    </joint>
+
+    <!-- upper arm -->
+    <link name="arm_upper_link">
+      <xacro:box_inertial mass="0.08" x="0.14" y="0.03" z="0.03">
+        <origin xyz="0.07 0 0"/>
+      </xacro:box_inertial>
+      <visual>
+        <origin xyz="0.07 0 0"/>
+        <geometry><box size="0.14 0.03 0.03"/></geometry>
+        <material name="a26_body"/>
+      </visual>
+    </link>
+    <joint name="arm_shoulder_joint" type="revolute">
+      <parent link="arm_base_link"/>
+      <child link="arm_upper_link"/>
+      <origin xyz="0 0 0.02" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="-1.2" upper="1.2" effort="8.0" velocity="3.0"/>
+    </joint>
+
+    <!-- forearm -->
+    <link name="arm_fore_link">
+      <xacro:box_inertial mass="0.06" x="0.12" y="0.03" z="0.02">
+        <origin xyz="0.06 0 0"/>
+      </xacro:box_inertial>
+      <visual>
+        <origin xyz="0.06 0 0"/>
+        <geometry><box size="0.12 0.03 0.02"/></geometry>
+        <material name="a26_body"/>
+      </visual>
+    </link>
+    <joint name="arm_elbow_joint" type="revolute">
+      <parent link="arm_upper_link"/>
+      <child link="arm_fore_link"/>
+      <origin xyz="0.14 0 0" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="-1.5" upper="1.5" effort="6.0" velocity="3.0"/>
+    </joint>
+
+    <!-- flat swiper paddle (fixed to the forearm tip) -->
+    <link name="paddle_link">
+      <xacro:box_inertial mass="0.05" x="0.02" y="0.12" z="0.08">
+        <origin xyz="0 0 0"/>
+      </xacro:box_inertial>
+      <visual>
+        <geometry><box size="0.02 0.12 0.08"/></geometry>
+        <material name="a26_paddle"/>
+      </visual>
+      <collision>
+        <geometry><box size="0.02 0.12 0.08"/></geometry>
+      </collision>
+    </link>
+    <joint name="paddle_joint" type="fixed">
+      <parent link="arm_fore_link"/>
+      <child link="paddle_link"/>
+      <origin xyz="0.12 0 0" rpy="0 0 0"/>
+    </joint>
+
+  </xacro:macro>
+
+</robot>

@@ -1,0 +1,13 @@
+# Ask the robot-info server (air26_robot_info, Task 3) for structural facts about
+# the robot, parsed from its URDF (/robot_description).
+#
+# Task 3 asks you to extend BOTH this .srv and the node. Some ideas for extra
+# request fields you might add: a category selector ("joint"/"link"/"summary"),
+# or a flag to include child links. Add them here and rebuild.
+
+# --- request ---
+string query    # a joint name, a link name, or "" to ask for an overall summary
+---
+# --- response ---
+bool success
+string report   # human-readable; the node also prints this to its terminal

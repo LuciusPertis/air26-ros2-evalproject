@@ -1,0 +1,18 @@
+# Execute a scripted swipe of the paddle arm.
+#
+# This is a plain .srv file you can edit. If a task makes you want another field
+# (e.g. a swipe speed, a number of repeats, an arc height) add it below the
+# request block, rebuild, and read it in air26_behaviors.
+
+# --- request ---
+uint8 PLANE_GROUND=0    # sweep low, clearing obstacles on the ground
+uint8 PLANE_CANOPY=1    # sweep high, clearing overhead / canopy obstacles
+uint8 plane
+
+uint8 DIR_LEFT_TO_RIGHT=0
+uint8 DIR_RIGHT_TO_LEFT=1
+uint8 direction
+---
+# --- response ---
+bool success
+string message

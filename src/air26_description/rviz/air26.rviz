@@ -1,0 +1,98 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+    Property Tree Widget:
+      Expanded: ~
+    Help Height: 78
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Global Options:
+    Background Color: 30; 30; 34
+    Fixed Frame: odom
+    Frame Rate: 30
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Cell Size: 0.5
+      Plane Cell Count: 20
+      Color: 80; 80; 80
+      Enabled: true
+    - Class: rviz_default_plugins/RobotModel
+      Name: RobotModel
+      Description Topic:
+        Depth: 5
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot_description
+      Enabled: true
+      Visual Enabled: true
+      Collision Enabled: false
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: true
+      Marker Scale: 0.3
+      Show Names: true
+      Show Axes: true
+      Show Arrows: false
+    - Class: rviz_default_plugins/LaserScan
+      Name: RearLidar
+      Topic:
+        Value: /scan
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+      Enabled: true
+      Size (m): 0.03
+      Style: Spheres
+      Color: 255; 60; 60
+    - Class: rviz_default_plugins/Range
+      Name: RangeFrontCenter
+      Topic:
+        Value: /range/front_center
+        Reliability Policy: Best Effort
+      Color: 30; 200; 220
+      Enabled: true
+    - Class: rviz_default_plugins/Range
+      Name: RangeRear
+      Topic:
+        Value: /range/rear
+        Reliability Policy: Best Effort
+      Color: 30; 200; 220
+      Enabled: true
+    - Class: rviz_default_plugins/Odometry
+      Name: Odometry
+      Topic:
+        Value: /odom
+        Reliability Policy: Reliable
+      Enabled: true
+      Keep: 100
+      Position Tolerance: 0.05
+      Angle Tolerance: 0.05
+      Covariance:
+        Value: false
+  Global Status:
+    Value: true
+  Tools:
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/Measure
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Name: Current View
+      Distance: 2.5
+      Pitch: 0.5
+      Yaw: 0.8
+      Focal Point:
+        X: 0.15
+        Y: 0
+        Z: 0.1
+Window Geometry:
+  Height: 800
+  Width: 1200
+  Displays:
+    collapsed: false
