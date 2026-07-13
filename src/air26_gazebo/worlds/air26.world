@@ -1,0 +1,179 @@
+<?xml version="1.0"?>
+<!--
+  air26.world — Gazebo Classic arena for the AIR26 rover (M2).
+
+  Mirrors the MuJoCo obstacle scene (air26_mujoco/mjcf/air26_rover.xml) so sensor
+  readings match M1: a light box on the front range ray (~0.13 m), a light box on
+  the rear ray for the backup demo (~0.24 m), and two canopy boxes on thin static
+  posts for the up-angled canopy sensors + canopy swipe (~0.25 m). All obstacles
+  are very low mass so the paddle displaces them.
+
+  The rover itself is NOT in this world; it is spawned from robot_description.
+  gazebo_ros system plugins (init/factory) are loaded on the command line by the
+  launch file, so /clock is published here (Gazebo is the sim-time source).
+-->
+<sdf version="1.6">
+  <world name="air26">
+
+    <include>
+      <uri>model://sun</uri>
+    </include>
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+
+    <physics type="ode">
+      <max_step_size>0.002</max_step_size>
+      <real_time_update_rate>500</real_time_update_rate>
+    </physics>
+
+    <!-- Bounding arena walls (±1.8 m box, 1.5 m tall). REQUIRED, not decoration:
+         Gazebo's gazebo_ros_ray_sensor emits a corrupt sensor_msgs/Range on a
+         no-hit ray, which crashes rclpy subscribers (e.g. the reactive behavior).
+         Enclosing the arena guarantees every range/lidar ray always terminates on
+         geometry within max_range, so every message is well-formed. This matches
+         the MuJoCo model's `wall` class (spec §7: obstacles + arena walls). -->
+    <model name="arena_walls">
+      <static>true</static>
+      <link name="link">
+        <collision name="n"><pose>0 1.8 0.75 0 0 0</pose>
+          <geometry><box><size>3.8 0.05 1.5</size></box></geometry></collision>
+        <visual name="nv"><pose>0 1.8 0.75 0 0 0</pose>
+          <geometry><box><size>3.8 0.05 1.5</size></box></geometry>
+          <material><ambient>0.3 0.3 0.35 1</ambient><diffuse>0.3 0.3 0.35 1</diffuse></material></visual>
+        <collision name="s"><pose>0 -1.8 0.75 0 0 0</pose>
+          <geometry><box><size>3.8 0.05 1.5</size></box></geometry></collision>
+        <visual name="sv"><pose>0 -1.8 0.75 0 0 0</pose>
+          <geometry><box><size>3.8 0.05 1.5</size></box></geometry>
+          <material><ambient>0.3 0.3 0.35 1</ambient><diffuse>0.3 0.3 0.35 1</diffuse></material></visual>
+        <collision name="e"><pose>1.8 0 0.75 0 0 0</pose>
+          <geometry><box><size>0.05 3.8 1.5</size></box></geometry></collision>
+        <visual name="ev"><pose>1.8 0 0.75 0 0 0</pose>
+          <geometry><box><size>0.05 3.8 1.5</size></box></geometry>
+          <material><ambient>0.3 0.3 0.35 1</ambient><diffuse>0.3 0.3 0.35 1</diffuse></material></visual>
+        <collision name="w"><pose>-1.8 0 0.75 0 0 0</pose>
+          <geometry><box><size>0.05 3.8 1.5</size></box></geometry></collision>
+        <visual name="wv"><pose>-1.8 0 0.75 0 0 0</pose>
+          <geometry><box><size>0.05 3.8 1.5</size></box></geometry>
+          <material><ambient>0.3 0.3 0.35 1</ambient><diffuse>0.3 0.3 0.35 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- reusable light-box macro-by-hand: ground obstacles -->
+    <model name="obs_ground_1">
+      <pose>0.55 0.0 0.06 0 0 0</pose>
+      <link name="link">
+        <inertial><mass>0.05</mass>
+          <inertia><ixx>1e-4</ixx><iyy>1e-4</iyy><izz>1e-4</izz>
+                   <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia>
+        </inertial>
+        <collision name="c"><geometry><box><size>0.10 0.10 0.12</size></box></geometry>
+          <surface><friction><ode><mu>0.6</mu><mu2>0.6</mu2></ode></friction></surface>
+        </collision>
+        <visual name="v"><geometry><box><size>0.10 0.10 0.12</size></box></geometry>
+          <material><ambient>0.9 0.55 0.1 1</ambient><diffuse>0.9 0.55 0.1 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="obs_ground_2">
+      <pose>0.75 -0.14 0.06 0 0 0</pose>
+      <link name="link">
+        <inertial><mass>0.04</mass>
+          <inertia><ixx>1e-4</ixx><iyy>1e-4</iyy><izz>1e-4</izz>
+                   <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia>
+        </inertial>
+        <collision name="c"><geometry><box><size>0.08 0.08 0.12</size></box></geometry>
+          <surface><friction><ode><mu>0.6</mu><mu2>0.6</mu2></ode></friction></surface>
+        </collision>
+        <visual name="v"><geometry><box><size>0.08 0.08 0.12</size></box></geometry>
+          <material><ambient>0.9 0.55 0.1 1</ambient><diffuse>0.9 0.55 0.1 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="obs_ground_3">
+      <pose>0.90 0.14 0.06 0 0 0</pose>
+      <link name="link">
+        <inertial><mass>0.04</mass>
+          <inertia><ixx>1e-4</ixx><iyy>1e-4</iyy><izz>1e-4</izz>
+                   <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia>
+        </inertial>
+        <collision name="c"><geometry><cylinder><radius>0.03</radius><length>0.12</length></cylinder></geometry>
+          <surface><friction><ode><mu>0.6</mu><mu2>0.6</mu2></ode></friction></surface>
+        </collision>
+        <visual name="v"><geometry><cylinder><radius>0.03</radius><length>0.12</length></cylinder></geometry>
+          <material><ambient>0.9 0.55 0.1 1</ambient><diffuse>0.9 0.55 0.1 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- rear obstacle (backup demo) -->
+    <model name="obs_rear">
+      <pose>-0.35 0.0 0.07 0 0 0</pose>
+      <link name="link">
+        <inertial><mass>0.06</mass>
+          <inertia><ixx>1e-4</ixx><iyy>1e-4</iyy><izz>1e-4</izz>
+                   <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia>
+        </inertial>
+        <collision name="c"><geometry><box><size>0.08 0.12 0.14</size></box></geometry>
+          <surface><friction><ode><mu>0.6</mu><mu2>0.6</mu2></ode></friction></surface>
+        </collision>
+        <visual name="v"><geometry><box><size>0.08 0.12 0.14</size></box></geometry>
+          <material><ambient>0.8 0.2 0.2 1</ambient><diffuse>0.8 0.2 0.2 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- canopy: light boxes resting on thin STATIC posts, on the up-angled
+         canopy sensor rays (and reachable by the canopy swipe) -->
+    <model name="post_left">
+      <static>true</static>
+      <pose>0.34 0.19 0.13 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><cylinder><radius>0.012</radius><length>0.26</length></cylinder></geometry></collision>
+        <visual name="v"><geometry><cylinder><radius>0.012</radius><length>0.26</length></cylinder></geometry>
+          <material><ambient>0.35 0.35 0.4 1</ambient><diffuse>0.35 0.35 0.4 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="obs_canopy_1">
+      <pose>0.34 0.19 0.30 0 0 0</pose>
+      <link name="link">
+        <inertial><mass>0.03</mass>
+          <inertia><ixx>5e-5</ixx><iyy>5e-5</iyy><izz>5e-5</izz>
+                   <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia>
+        </inertial>
+        <collision name="c"><geometry><box><size>0.10 0.10 0.08</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>0.10 0.10 0.08</size></box></geometry>
+          <material><ambient>0.9 0.55 0.1 1</ambient><diffuse>0.9 0.55 0.1 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="post_right">
+      <static>true</static>
+      <pose>0.36 -0.20 0.13 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><cylinder><radius>0.012</radius><length>0.26</length></cylinder></geometry></collision>
+        <visual name="v"><geometry><cylinder><radius>0.012</radius><length>0.26</length></cylinder></geometry>
+          <material><ambient>0.35 0.35 0.4 1</ambient><diffuse>0.35 0.35 0.4 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="obs_canopy_2">
+      <pose>0.36 -0.20 0.30 0 0 0</pose>
+      <link name="link">
+        <inertial><mass>0.03</mass>
+          <inertia><ixx>5e-5</ixx><iyy>5e-5</iyy><izz>5e-5</izz>
+                   <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia>
+        </inertial>
+        <collision name="c"><geometry><box><size>0.10 0.10 0.08</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>0.10 0.10 0.08</size></box></geometry>
+          <material><ambient>0.9 0.55 0.1 1</ambient><diffuse>0.9 0.55 0.1 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

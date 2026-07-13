@@ -1,0 +1,219 @@
+<?xml version="1.0"?>
+<!--
+  air26_gazebo.urdf.xacro — the ENGINE layer for Gazebo Classic.
+
+  This does NOT redefine the robot. It `xacro:include`s the SHARED description
+  (air26_description/urdf/air26_robot.urdf.xacro, byte-identical across branches)
+  and only bolts on what Gazebo needs:
+
+    * a <ros2_control> block (the frozen 9 joints) backed by the
+      gazebo_ros2_control GazeboSystem hardware,
+    * the gazebo_ros2_control plugin that spins up a controller_manager loading
+      config/controllers.yaml (ackermann_steering_controller + arm JTC + JSB),
+    * gazebo_ros ray-sensor plugins that publish /scan and /range/<name> on the
+      SAME topics/frames as the MuJoCo driver,
+    * per-wheel friction (rear pair gets low lateral mu so steady turns scrub,
+      matching spec §7 and the MJCF `wheel_rear` class).
+
+  The shared robot_state_publisher is launched with THIS file (see
+  gazebo.launch.py -> demo.launch.py description_file arg), so the ros2_control
+  tags reach the plugin while every topic/frame/param name stays identical to M1.
+-->
+<robot name="air26_rover" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- the shared, engine-agnostic robot -->
+  <xacro:include filename="$(find air26_description)/urdf/air26_robot.urdf.xacro"/>
+
+  <!-- ==================== geometry (mirror the shared xacro) ==================== -->
+  <xacro:property name="wheel_radius" value="0.05"/>
+  <xacro:property name="wheelbase"    value="0.30"/>
+  <xacro:property name="track_width"  value="0.26"/>
+
+  <!-- arm home (stow) so the arm boots settled instead of drooping, like the
+       MuJoCo driver's ARM_STOW init -->
+  <xacro:property name="stow_shoulder" value="1.10"/>
+  <xacro:property name="stow_elbow"    value="-1.40"/>
+
+  <!-- ==================== ros2_control hardware ==================== -->
+  <!-- The frozen 9 joints. Steering + arm are position-commanded, rear traction
+       is velocity-commanded; the two front ROLL wheels are passive (state only)
+       so they still show up in /joint_states without being driven. -->
+  <ros2_control name="air26_gz_system" type="system">
+    <hardware>
+      <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+    </hardware>
+
+    <!-- front steering (position) -->
+    <joint name="front_left_steer_joint">
+      <command_interface name="position"/>
+      <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
+      <state_interface name="velocity"/>
+    </joint>
+    <joint name="front_right_steer_joint">
+      <command_interface name="position"/>
+      <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <!-- rear traction (velocity, no differential — both driven equally) -->
+    <joint name="rear_left_wheel_joint">
+      <command_interface name="velocity"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+    <joint name="rear_right_wheel_joint">
+      <command_interface name="velocity"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <!-- front roll wheels: passive, reported only (keeps /joint_states at 9) -->
+    <joint name="front_left_wheel_joint">
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+    <joint name="front_right_wheel_joint">
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <!-- arm (position), initialised to the stow pose -->
+    <joint name="arm_yaw_joint">
+      <command_interface name="position"/>
+      <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
+      <state_interface name="velocity"/>
+    </joint>
+    <joint name="arm_shoulder_joint">
+      <command_interface name="position"/>
+      <state_interface name="position"><param name="initial_value">${stow_shoulder}</param></state_interface>
+      <state_interface name="velocity"/>
+    </joint>
+    <joint name="arm_elbow_joint">
+      <command_interface name="position"/>
+      <state_interface name="position"><param name="initial_value">${stow_elbow}</param></state_interface>
+      <state_interface name="velocity"/>
+    </joint>
+  </ros2_control>
+
+  <!-- ==================== gazebo_ros2_control plugin ==================== -->
+  <gazebo>
+    <plugin filename="libgazebo_ros2_control.so" name="gazebo_ros2_control">
+      <!-- Read the engine URDF (with these ros2_control tags) from the dedicated
+           comment-stripped holder node, NOT the shared robot_state_publisher.
+           The shared RSP keeps /robot_description pristine; feeding this plugin
+           the commented URDF makes rcl's param parser choke. -->
+      <robot_param>robot_description</robot_param>
+      <robot_param_node>gz_description</robot_param_node>
+      <parameters>$(find air26_gazebo)/config/controllers.yaml</parameters>
+    </plugin>
+  </gazebo>
+
+  <!-- ==================== wheel friction (spec §7) ==================== -->
+  <!-- Front wheels: normal grip. Rear pair: low lateral (mu2) friction so the
+       rigid, no-diff rear axle scrubs cleanly on steady turns instead of binding. -->
+  <xacro:macro name="wheel_friction" params="link mu1 mu2">
+    <gazebo reference="${link}">
+      <mu1>${mu1}</mu1>
+      <mu2>${mu2}</mu2>
+      <kp>1e6</kp>
+      <kd>1.0</kd>
+      <material>Gazebo/Black</material>
+    </gazebo>
+  </xacro:macro>
+  <xacro:wheel_friction link="front_left_wheel_link"  mu1="1.5" mu2="1.0"/>
+  <xacro:wheel_friction link="front_right_wheel_link" mu1="1.5" mu2="1.0"/>
+  <xacro:wheel_friction link="rear_left_wheel_link"   mu1="1.0" mu2="0.05"/>
+  <xacro:wheel_friction link="rear_right_wheel_link"  mu1="1.0" mu2="0.05"/>
+
+  <!-- ==================== sensors ==================== -->
+  <!-- Rear 2D lidar -> /scan (frame lidar_link). lidar_link is rpy z=pi in the
+       shared URDF, so the 0-angle ray points to the rover's rear, matching M1. -->
+  <gazebo reference="lidar_link">
+    <sensor name="rear_lidar" type="ray">
+      <pose>0 0 0 0 0 0</pose>
+      <update_rate>20.0</update_rate>
+      <always_on>true</always_on>
+      <visualize>false</visualize>
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>180</samples>
+            <resolution>1</resolution>
+            <min_angle>-3.14159265</min_angle>
+            <max_angle>3.14159265</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.05</min>
+          <max>2.0</max>
+          <resolution>0.01</resolution>
+        </range>
+      </ray>
+      <plugin name="rear_lidar_plugin" filename="libgazebo_ros_ray_sensor.so">
+        <ros>
+          <remapping>~/out:=/scan</remapping>
+        </ros>
+        <output_type>sensor_msgs/LaserScan</output_type>
+        <frame_name>lidar_link</frame_name>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+  <!-- Ultrasonic range ring -> /range/<name> (frame <name>_range_link). A narrow
+       ray fan collapsed to a sensor_msgs/Range, one per sensor. -->
+  <!-- `xoff` pushes the ray origin along the sensor's local +x. The front_left /
+       front_right pucks sit ~0.02 m INSIDE the chassis front face, so their rays
+       would exit through (and hit) the chassis; a small offset starts them
+       outside the body. -->
+  <xacro:macro name="range_gz" params="name xoff:=0">
+    <gazebo reference="${name}_range_link">
+      <sensor name="${name}_range" type="ray">
+        <pose>${xoff} 0 0 0 0 0</pose>
+        <update_rate>15.0</update_rate>
+        <always_on>true</always_on>
+        <visualize>false</visualize>
+        <!-- A TIGHT 3-ray horizontal fan along local +x. Notes:
+             * A single degenerate ray (samples=1, min==max) makes Gazebo emit a
+               corrupt Range msg on a no-hit that crashes rclpy subscribers.
+             * A wide fan (or any vertical spread) has no self-filter and catches
+               the rover's own body / the ground. This narrow horizontal-only fan
+               stays valid while behaving like the MuJoCo single mj_ray. -->
+        <ray>
+          <scan>
+            <horizontal>
+              <samples>3</samples>
+              <resolution>1</resolution>
+              <min_angle>-0.02</min_angle>
+              <max_angle>0.02</max_angle>
+            </horizontal>
+          </scan>
+          <range>
+            <min>0.02</min>
+            <!-- 3.0 (> the 1.8 m arena) so up-angled canopy rays still reach a
+                 wall and never no-hit; open sensors then read ~1.7-2.1 m. -->
+            <max>3.0</max>
+            <resolution>0.01</resolution>
+          </range>
+        </ray>
+        <plugin name="${name}_range_plugin" filename="libgazebo_ros_ray_sensor.so">
+          <ros>
+            <remapping>~/out:=/range/${name}</remapping>
+          </ros>
+          <output_type>sensor_msgs/Range</output_type>
+          <radiation_type>ultrasound</radiation_type>
+          <frame_name>${name}_range_link</frame_name>
+        </plugin>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+
+  <xacro:range_gz name="front_center"/>
+  <xacro:range_gz name="front_left"  xoff="0.04"/>
+  <xacro:range_gz name="front_right" xoff="0.04"/>
+  <xacro:range_gz name="left"/>
+  <xacro:range_gz name="right"/>
+  <xacro:range_gz name="rear"/>
+  <xacro:range_gz name="canopy_left"/>
+  <xacro:range_gz name="canopy_right"/>
+
+</robot>
